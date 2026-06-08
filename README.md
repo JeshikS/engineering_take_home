@@ -16,6 +16,7 @@ This project is an automated lead generation and outreach pipeline that:
 ---
 
 ## Architecture
+<img width="851" height="951" alt="engineering_take_home" src="https://github.com/user-attachments/assets/cea13bc3-fdff-436c-a179-4f3c9198b8f7" />
 
 ```text
 Input Domain
