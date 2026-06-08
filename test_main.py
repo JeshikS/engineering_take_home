@@ -7,7 +7,7 @@ from services.brevo import BrevoService
 from utils.file_utils import save_json
 from utils.email_template import generate_email
 from utils.logger import setup_logger
-
+from pipeline.similar_company_finder import SimilarCompanyFinder
 
 logger = setup_logger()
 load_dotenv()
@@ -29,13 +29,50 @@ def main():
 
     result = pipeline.run(domain)
 
+    company = result["company"]
+
+    candidate_companies = [
+        {
+            "name": "Checkout.com",
+            "industries": [
+                "financial services",
+                "internet"
+            ],
+            "keywords": [
+                "payments",
+                "payment gateway"
+            ],
+            "employees": 1800
+        },
+        {
+            "name": "Adyen",
+            "industries": [
+                "financial services",
+                "internet"
+            ],
+            "keywords": [
+                "payments",
+                "payment processing"
+            ],
+            "employees": 4000
+        }
+    ]
+
+    finder = SimilarCompanyFinder()
+
+    similar_companies = finder.rank_companies(
+        source_company=company,
+        candidate_companies=candidate_companies
+    )
+
+    save_json(
+        similar_companies,
+        "similar_companies.json"
+    )
+
     save_json(
         result,
         f"leads_{domain}.json"
-    )
-    save_json(
-        result["similar_companies"],
-        "similar_companies.json"
     )
 
     print(
