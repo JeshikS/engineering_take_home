@@ -1,18 +1,65 @@
 import os
-import requests
+
 from dotenv import load_dotenv
+
+from utils.retry_session import (
+    create_retry_session
+)
 
 load_dotenv()
 
 
 class BrevoService:
-    BASE_URL = "https://api.brevo.com/v3/smtp/email"
+
+    BASE_URL = (
+        "https://api.brevo.com/"
+        "v3/smtp/email"
+    )
 
     def __init__(self):
-        self.api_key = os.getenv("BREVO_API_KEY")
+
+        self.api_key = os.getenv(
+            "BREVO_API_KEY"
+        )
 
         if not self.api_key:
-            raise ValueError("BREVO_API_KEY not found")
+
+            raise ValueError(
+                "BREVO_API_KEY not found"
+            )
+
+        self.sender_name = os.getenv(
+            "BREVO_SENDER_NAME"
+        )
+
+        self.sender_email = os.getenv(
+            "BREVO_SENDER_EMAIL"
+        )
+
+        if not self.sender_name:
+
+            raise ValueError(
+                "BREVO_SENDER_NAME not found"
+            )
+
+        if not self.sender_email:
+
+            raise ValueError(
+                "BREVO_SENDER_EMAIL not found"
+            )
+
+        self.session = (
+            create_retry_session()
+        )
+
+        self.headers = {
+            "accept":
+                "application/json",
+            "api-key":
+                self.api_key,
+            "content-type":
+                "application/json",
+        }
 
     def send_email(
         self,
@@ -21,31 +68,32 @@ class BrevoService:
         subject: str,
         html_content: str,
     ):
-        headers = {
-            "accept": "application/json",
-            "api-key": self.api_key,
-            "content-type": "application/json",
-        }
 
         payload = {
             "sender": {
-                "name": "Jeshik",
-                "email": os.getenv("BREVO_SENDER_EMAIL"),
+                "name":
+                    self.sender_name,
+                "email":
+                    self.sender_email,
             },
             "to": [
                 {
-                    "email": recipient_email,
-                    "name": recipient_name,
+                    "email":
+                        recipient_email,
+                    "name":
+                        recipient_name,
                 }
             ],
-            "subject": subject,
-            "htmlContent": html_content,
+            "subject":
+                subject,
+            "htmlContent":
+                html_content,
         }
 
-        response = requests.post(
+        response = self.session.post(
             self.BASE_URL,
             json=payload,
-            headers=headers,
+            headers=self.headers,
             timeout=30,
         )
 
