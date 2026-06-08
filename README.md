@@ -1,4 +1,3 @@
-# engineering_take_home
 # Engineering Take-Home Assignment
 
 ## Overview
