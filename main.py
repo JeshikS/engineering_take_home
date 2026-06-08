@@ -1,6 +1,8 @@
-import sys
 import os
+import sys
+
 from dotenv import load_dotenv
+
 from pipeline.lead_pipeline import LeadPipeline
 from services.brevo import BrevoService
 
@@ -10,45 +12,84 @@ from utils.logger import setup_logger
 
 
 logger = setup_logger()
+
 load_dotenv()
-TEST_EMAIL = os.getenv("TEST_EMAIL")
+
+TEST_EMAIL = os.getenv(
+    "TEST_EMAIL"
+)
+
 
 def main():
 
-    if len(sys.argv) < 2:
+    if len(sys.argv) not in [2, 3]:
 
         print(
-            "Usage: python main.py <domain>"
+            "Usage: "
+            "python main.py <domain> [--test]"
         )
 
         sys.exit(1)
 
     domain = sys.argv[1]
-    TEST_MODE = "--test" in sys.argv
+
+    TEST_MODE = (
+        "--test" in sys.argv
+    )
+
+    if TEST_MODE and not TEST_EMAIL:
+
+        raise ValueError(
+            "TEST_EMAIL is required "
+            "when using --test"
+        )
+
     pipeline = LeadPipeline()
 
-    result = pipeline.run(domain)
+    result = pipeline.run(
+        domain
+    )
 
     save_json(
         result,
         f"leads_{domain}.json"
     )
-    save_json(
-        result["similar_companies"],
-        "similar_companies.json"
+
+    source_company = (
+        result["source_company"]
+    )
+
+    similar_company_leads = (
+        result["similar_company_leads"]
     )
 
     print(
-        f"\nCompany: {result['company']['name']}"
+        f"\nSource Company: "
+        f"{source_company['name']}"
     )
 
     print(
-        f"Decision makers found: {len(result['contacts'])}"
+        f"Similar Companies Found: "
+        f"{result['similar_companies_found']}"
     )
+
+    print(
+        f"Decision Makers Found: "
+        f"{result['total_contacts_found']}"
+    )
+
     if TEST_MODE:
-        print(f"Mode: TEST ({TEST_EMAIL})")
+
+        print(
+            f"Mode: TEST "
+            f"({TEST_EMAIL})"
+        )
+
     else:
-        print("Mode: LIVE")
+
+        print(
+            "Mode: LIVE"
+        )
 
     confirm = input(
         "\nSend emails? (y/n): "
@@ -64,40 +105,71 @@ def main():
 
     brevo = BrevoService()
 
-    company = result["company"]
+    emails_sent = 0
 
-    for contact in result["contacts"]:
+    for lead in similar_company_leads:
 
-        try:
+        company = lead["company"]
 
-            html_content = generate_email(
-                company,
-                contact
-            )
+        contacts = lead["contacts"]
 
-            recipient_email = (
-                TEST_EMAIL
-                if TEST_MODE
-                else contact["email"]
-            )
+        for contact in contacts:
 
-            brevo.send_email(
-                recipient_email=recipient_email,
-                recipient_name=f"{contact['first_name']} {contact['last_name']}",
-                subject=f"Regarding {company['name']}",
-                html_content=html_content
-            )
+            try:
 
-            logger.info(
-                f"Email sent to {contact['email']}"
-            )
+                html_content = (
+                    generate_email(
+                        company,
+                        contact
+                    )
+                )
 
-        except Exception as e:
+                recipient_email = (
+                    TEST_EMAIL
+                    if TEST_MODE
+                    else contact["email"]
+                )
 
-            logger.error(
-                f"Failed to send email to "
-                f"{contact['email']}: {e}"
-            )
+                brevo.send_email(
+                    recipient_email=
+                        recipient_email,
+
+                    recipient_name=
+                        (
+                            f"{contact['first_name']} "
+                            f"{contact['last_name']}"
+                        ),
+
+                    subject=
+                        (
+                            f"Regarding "
+                            f"{company['name']}"
+                        ),
+
+                    html_content=
+                        html_content
+                )
+
+                emails_sent += 1
+
+                logger.info(
+                    f"Email sent to "
+                    f"{recipient_email}"
+                )
+
+            except Exception as e:
+
+                logger.error(
+                    f"Failed to send email "
+                    f"to "
+                    f"{contact.get('email')}: "
+                    f"{e}"
+                )
+
+    print(
+        f"\nFinished. "
+        f"{emails_sent} emails sent."
+    )
 
 
 if __name__ == "__main__":

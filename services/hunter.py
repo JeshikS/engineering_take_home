@@ -1,21 +1,43 @@
 import os
-import requests
+
 from dotenv import load_dotenv
+
+from utils.retry_session import (
+    create_retry_session
+)
 
 load_dotenv()
 
 
 class HunterService:
-    BASE_URL = "https://api.hunter.io/v2/domain-search"
+
+    BASE_URL = (
+        "https://api.hunter.io/"
+        "v2/domain-search"
+    )
 
     def __init__(self):
-        self.api_key = os.getenv("HUNTER_API_KEY")
+
+        self.api_key = os.getenv(
+            "HUNTER_API_KEY"
+        )
 
         if not self.api_key:
-            raise ValueError("HUNTER_API_KEY not found")
 
-    def get_contacts(self, domain: str) -> list:
-        response = requests.get(
+            raise ValueError(
+                "HUNTER_API_KEY not found"
+            )
+
+        self.session = (
+            create_retry_session()
+        )
+
+    def get_contacts(
+        self,
+        domain: str
+    ) -> list:
+
+        response = self.session.get(
             self.BASE_URL,
             params={
                 "domain": domain,
@@ -30,13 +52,44 @@ class HunterService:
 
         contacts = []
 
-        for person in data.get("data", {}).get("emails", []):
-            contacts.append({
-                "first_name": person.get("first_name"),
-                "last_name": person.get("last_name"),
-                "position": person.get("position"),
-                "email": person.get("value"),
-                "confidence": person.get("confidence")
-            })
+        for person in (
+            data.get(
+                "data",
+                {}
+            ).get(
+                "emails",
+                []
+            )
+        ):
+
+            email = person.get(
+                "value"
+            )
+
+            if not email:
+                continue
+
+            contacts.append(
+                {
+                    "first_name":
+                        person.get(
+                            "first_name"
+                        ) or "",
+                    "last_name":
+                        person.get(
+                            "last_name"
+                        ) or "",
+                    "position":
+                        person.get(
+                            "position"
+                        ),
+                    "email":
+                        email,
+                    "confidence":
+                        person.get(
+                            "confidence"
+                        )
+                }
+            )
 
         return contacts

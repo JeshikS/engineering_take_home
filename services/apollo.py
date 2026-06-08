@@ -1,33 +1,59 @@
 import os
-import requests
+
 from dotenv import load_dotenv
+
+from utils.retry_session import (
+    create_retry_session
+)
 
 load_dotenv()
 
 
 class ApolloService:
-    BASE_URL = "https://api.apollo.io/api/v1/organizations/search"
+
+    BASE_URL = (
+        "https://api.apollo.io/api/v1/"
+        "organizations/search"
+    )
 
     def __init__(self):
-        self.api_key = os.getenv("APOLLO_API_KEY")
+
+        self.api_key = os.getenv(
+            "APOLLO_API_KEY"
+        )
 
         if not self.api_key:
-            raise ValueError("APOLLO_API_KEY not found in environment variables")
 
-    def get_company(self, domain: str) -> dict:
+            raise ValueError(
+                "APOLLO_API_KEY not found "
+                "in environment variables"
+            )
+
+        self.session = (
+            create_retry_session()
+        )
+
+        self.headers = {
+            "Content-Type":
+                "application/json",
+            "X-Api-Key":
+                self.api_key
+        }
+
+    def get_company(
+        self,
+        domain: str
+    ) -> dict:
+
         payload = {
-            "q_organization_domains_list": [domain]
+            "q_organization_domains_list":
+                [domain]
         }
 
-        headers = {
-            "Content-Type": "application/json",
-            "X-Api-Key": self.api_key
-        }
-
-        response = requests.post(
+        response = self.session.post(
             self.BASE_URL,
             json=payload,
-            headers=headers,
+            headers=self.headers,
             timeout=30
         )
 
@@ -35,44 +61,76 @@ class ApolloService:
 
         data = response.json()
 
-        if not data.get("organizations"):
+        if not data.get(
+            "organizations"
+        ):
             return {}
 
-        company = data["organizations"][0]
+        company = (
+            data["organizations"][0]
+        )
 
         return {
-            "id": company.get("id"),
-            "name": company.get("name"),
-            "domain": company.get("primary_domain"),
-            "industry": company.get("industry"),
-            "industries": company.get("industries", []),
-            "employees": company.get("estimated_num_employees"),
-            "revenue": company.get("organization_revenue"),
-            "linkedin": company.get("linkedin_url"),
-            "website": company.get("website_url"),
-            "keywords": company.get("keywords", [])
+            "id":
+                company.get("id"),
+            "name":
+                company.get("name"),
+            "domain":
+                company.get(
+                    "primary_domain"
+                ),
+            "industry":
+                company.get(
+                    "industry"
+                ),
+            "industries":
+                company.get(
+                    "industries",
+                    []
+                ),
+            "employees":
+                company.get(
+                    "estimated_num_employees"
+                ),
+            "revenue":
+                company.get(
+                    "organization_revenue"
+                ),
+            "linkedin":
+                company.get(
+                    "linkedin_url"
+                ),
+            "website":
+                company.get(
+                    "website_url"
+                ),
+            "keywords":
+                company.get(
+                    "keywords",
+                    []
+                )
         }
+
     def search_companies_by_industry(
         self,
         industry: str,
         page: int = 1,
         per_page: int = 50
     ):
+
         payload = {
-            "organization_industries": [industry],
-            "page": page,
-            "per_page": per_page
+            "organization_industries":
+                [industry],
+            "page":
+                page,
+            "per_page":
+                per_page
         }
 
-        headers = {
-            "Content-Type": "application/json",
-            "X-Api-Key": self.api_key
-        }
-
-        response = requests.post(
+        response = self.session.post(
             self.BASE_URL,
             json=payload,
-            headers=headers,
+            headers=self.headers,
             timeout=30
         )
 
@@ -82,17 +140,36 @@ class ApolloService:
 
         companies = []
 
-        for company in data.get("organizations", []):
+        for company in data.get(
+            "organizations",
+            []
+        ):
 
-            companies.append({
-                "id": company.get("id"),
-                "name": company.get("name"),
-                "domain": company.get("primary_domain"),
-                "industries": company.get("industries", []),
-                "keywords": company.get("keywords", []),
-                "employees": company.get(
-                    "estimated_num_employees"
-                )
-            })
+            companies.append(
+                {
+                    "id":
+                        company.get("id"),
+                    "name":
+                        company.get("name"),
+                    "domain":
+                        company.get(
+                            "primary_domain"
+                        ),
+                    "industries":
+                        company.get(
+                            "industries",
+                            []
+                        ),
+                    "keywords":
+                        company.get(
+                            "keywords",
+                            []
+                        ),
+                    "employees":
+                        company.get(
+                            "estimated_num_employees"
+                        )
+                }
+            )
 
         return companies
