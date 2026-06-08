@@ -1,0 +1,16 @@
+{
+  "source_company": {
+    "name": "Stripe",
+    "domain": "stripe.com"
+  },
+  "similar_companies": [
+    {
+      "name": "Checkout.com",
+      "contacts": []
+    },
+    {
+      "name": "Adyen",
+      "contacts": []
+    }
+  ]
+}
